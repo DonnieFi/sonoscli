@@ -36,6 +36,9 @@ func TestSMAPI_BeginAuthentication_APIClientIdentityError(t *testing.T) {
 			if got := strings.Contains(err.Error(), "API client identity"); got != tt.wantHint {
 				t.Fatalf("API identity hint = %v, want %v: %v", got, tt.wantHint, err)
 			}
+			if tt.wantHint && (!strings.Contains(err.Error(), "Sonos app") || !strings.Contains(err.Error(), "sonos play-url") || !strings.Contains(err.Error(), "not account authentication")) {
+				t.Fatalf("missing supported playback alternative and authentication distinction: %v", err)
+			}
 			if strings.Contains(err.Error(), "private account detail") {
 				t.Fatalf("error exposed response body: %v", err)
 			}

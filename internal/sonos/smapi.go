@@ -581,7 +581,7 @@ func smapiHTTPError(statusCode int, status string, raw []byte) error {
 		if json.Unmarshal(raw, &payload) == nil &&
 			payload.Error.Status == "PERMISSION_DENIED" &&
 			strings.Contains(payload.Error.Message, "Method doesn't allow unregistered callers") {
-			return fmt.Errorf("smapi soap http %s: service requires a registered API client identity (API key or equivalent); account linking alone cannot resolve this", status)
+			return fmt.Errorf("smapi soap http %s: service requires a registered API client identity (API key or equivalent); account linking alone cannot resolve this; start playback in the Sonos app and control it with sonos, or use sonos play-url with a public URL (playback only, not account authentication)", status)
 		}
 	}
 	return fmt.Errorf("smapi soap http %s", status)
