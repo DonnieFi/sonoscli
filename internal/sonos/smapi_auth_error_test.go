@@ -11,16 +11,19 @@ import (
 func TestSMAPI_BeginAuthentication_APIClientIdentityError(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
+		status   int
 		body     string
 		wantHint bool
 	}{
-		{"unregistered caller", `{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Method doesn't allow unregistered callers (callers without established identity). Please use API Key or other form of API consumer identity to call this API."}}`, true},
-		{"other permission error", `{"error":{"status":"PERMISSION_DENIED","message":"private account detail"}}`, false},
-		{"non JSON response", `<html>private account detail</html>`, false},
+		{"unregistered caller", http.StatusForbidden, `{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Method doesn't allow unregistered callers (callers without established identity). Please use API Key or other form of API consumer identity to call this API. private account detail"}}`, true},
+		{"other permission error", http.StatusForbidden, `{"error":{"status":"PERMISSION_DENIED","message":"private account detail"}}`, false},
+		{"non JSON response", http.StatusForbidden, `<html>private account detail</html>`, false},
+		{"other HTTP status", http.StatusUnauthorized, `{"error":{"status":"PERMISSION_DENIED","message":"Method doesn't allow unregistered callers. private account detail"}}`, false},
+		{"other API status", http.StatusForbidden, `{"error":{"status":"UNAUTHENTICATED","message":"Method doesn't allow unregistered callers. private account detail"}}`, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusForbidden)
+				w.WriteHeader(tt.status)
 				_, _ = w.Write([]byte(tt.body))
 			}))
 			defer srv.Close()
@@ -30,7 +33,7 @@ func TestSMAPI_BeginAuthentication_APIClientIdentityError(t *testing.T) {
 				HouseholdID: "test-household", DeviceID: "test-device", TokenStore: newMemTokenStore(),
 			}
 			_, err := c.BeginAuthentication(context.Background())
-			if err == nil || !strings.Contains(err.Error(), "403 Forbidden") {
+			if err == nil || !strings.Contains(err.Error(), http.StatusText(tt.status)) {
 				t.Fatalf("expected HTTP status in error, got %v", err)
 			}
 			if got := strings.Contains(err.Error(), "API client identity"); got != tt.wantHint {
